@@ -7,6 +7,8 @@ router.get("/item/details", isAuth.userIsAuth, userController.getItemDetails);
 
 router.get("/customers", isAuth.userIsAuth, userController.getCustomers);
 
+router.get("/get/customer", isAuth.userIsAuth, userController.getCustomer);
+
 router.get(
   "/customer/branches",
   isAuth.userIsAuth,
@@ -21,6 +23,10 @@ router.get(
 
 router.get("/area", isAuth.userIsAuth, userController.getAreas);
 
-router.post("/sells/invoice", isAuth.userIsAuth, userController.postSellsInvoice)
+router.post(
+  "/sells/invoice",
+  isAuth.userIsAuth,
+  userController.postSellsInvoice
+);
 
 module.exports = router;
