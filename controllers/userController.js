@@ -2,6 +2,16 @@ const oracledb = require("oracledb");
 const dbConnect = require("../dbConnect/dbConnect");
 const utilities = require("../utilities/utils");
 
+exports.getDataScout = async (req, res, next) => {
+  try {
+    const connection = await dbConnect.getConnection();
+    const result = await connection.execute(`SELECT * FROM APP_USERS`);
+    res.status(200).json({ result });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getItemDetails = async (req, res, next) => {
   try {
     const { barcode } = req.query;
@@ -162,8 +172,8 @@ exports.postSellsInvoice = async (req, res, next) => {
       custBranchId: custBranchId,
       areaId: areaId,
     };
-    // REGISTER INVOICE DETAILS
     await connection.execute(sql, binds);
+    // REGISTER INVOICE DETAILS
     for (let detail of invoiceDetails) {
       let id = await utilities.getLastId("STOCK_MOVE_DT_CLONE");
       let sql = `
@@ -187,58 +197,152 @@ exports.postSellsInvoice = async (req, res, next) => {
       await connection.execute(sql, binds);
     }
     await connection.tpcCommit();
-    if (transType === 1) {
-      const procedureSql = `BEGIN ONLINE_PKG.POST_UNPOSTT(:id, :param); END;`;
-      const procedureBinds = {
-        id: {
-          dir: oracledb.BIND_IN,
-          type: oracledb.NUMBER,
-          val: invoiceHeaderId,
-        },
-        param: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: "P" },
-      };
-      await connection.execute(procedureSql, procedureBinds);
-      await connection.tpcCommit();
-      const nextProcedureSql = `BEGIN ONLINE_PKG.POST_SALES_INV (:id, :param); END;`;
-      const nextProcedureBinds = {
-        id: {
-          dir: oracledb.BIND_IN,
-          type: oracledb.NUMBER,
-          val: invoiceHeaderId,
-        },
-        param: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: "P" },
-      };
-      await connection.execute(nextProcedureSql, nextProcedureBinds);
-      await connection.tpcCommit();
-    } else if (transType === 2) {
-      const returnProcedureSql = `ONLINE_PKG.POST_UNPOSTT(:id, :param); END;`;
-      const returnProcedureBinds = {
-        id: {
-          dir: oracledb.BIND_IN,
-          type: oracledb.NUMBER,
-          val: invoiceHeaderId,
-        },
-        param: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: "U" },
-      };
-      await connection.execute(returnProcedureSql, returnProcedureBinds);
-      await connection.tpcCommit();
-      const nextReturnProcedureSql = `ONLINE_PKG.POST_SALES_RETURN (:id, :param); END;`;
-      const nextReturnProcedureBinds = {
-        id: {
-          dir: oracledb.BIND_IN,
-          type: oracledb.NUMBER,
-          val: invoiceHeaderId,
-        },
-        param: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: "P" },
-      };
-      await connection.execute(
-        nextReturnProcedureSql,
-        nextReturnProcedureBinds
-      );
-    }
+    // if (transType === 1) {
+    //   const procedureSql = `BEGIN ONLINE_PKG.POST_UNPOSTT(:id, :param); END;`;
+    //   const procedureBinds = {
+    //     id: {
+    //       dir: oracledb.BIND_IN,
+    //       type: oracledb.NUMBER,
+    //       val: invoiceHeaderId,
+    //     },
+    //     param: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: "P" },
+    //   };
+    //   await connection.execute(procedureSql, procedureBinds);
+    //   await connection.tpcCommit();
+    //   const nextProcedureSql = `BEGIN ONLINE_PKG.POST_SALES_INV (:id, :param); END;`;
+    //   const nextProcedureBinds = {
+    //     id: {
+    //       dir: oracledb.BIND_IN,
+    //       type: oracledb.NUMBER,
+    //       val: invoiceHeaderId,
+    //     },
+    //     param: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: "P" },
+    //   };
+    //   await connection.execute(nextProcedureSql, nextProcedureBinds);
+    //   await connection.tpcCommit();
+    // } else if (transType === 2) {
+    //   const returnProcedureSql = `ONLINE_PKG.POST_UNPOSTT(:id, :param); END;`;
+    //   const returnProcedureBinds = {
+    //     id: {
+    //       dir: oracledb.BIND_IN,
+    //       type: oracledb.NUMBER,
+    //       val: invoiceHeaderId,
+    //     },
+    //     param: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: "U" },
+    //   };
+    //   await connection.execute(returnProcedureSql, returnProcedureBinds);
+    //   const nextReturnProcedureSql = `ONLINE_PKG.POST_SALES_RETURN (:id, :param); END;`;
+    //   const nextReturnProcedureBinds = {
+    //     id: {
+    //       dir: oracledb.BIND_IN,
+    //       type: oracledb.NUMBER,
+    //       val: invoiceHeaderId,
+    //     },
+    //     param: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: "P" },
+    //   };
+    //   await connection.execute(
+    //     nextReturnProcedureSql,
+    //     nextReturnProcedureBinds
+    //   );
+    //   await connection.tpcCommit();
+    // }
     res
       .status(201)
       .json({ success: true, message: "invoice registered successfully" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getStores = async (req, res, next) => {
+  try {
+    const connection = await dbConnect.getConnection();
+    const stores = await connection.execute(`SELECT * FROM STORES`);
+    res.status(200).json({ success: true, stores });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.postTransfereItems = async (req, res, next) => {
+  try {
+    const { transType, storeId, toStoreId, totalCost, username, items } =
+      req.body;
+    const connection = await dbConnect.getConnection();
+    // GET INVOICE HEADER ID AND TRANS NUMBER
+    const invoiceHeaderId = await utilities.getLastId("STOCK_MOVE_HD_CLONE");
+    const transNumber = await utilities.getLastId(
+      "STOCK_MOVE_HD_CLONE",
+      "TRANS_NO",
+      "TRANS_TYPE",
+      transType
+    );
+    // REGISTER Voucher HEADER
+    const currentDate = new Date();
+    const localDate = utilities.getLocalDate(currentDate);
+    const sql = `
+      INSERT INTO STOCK_MOVE_HD_CLONE
+      (ID, TRANS_NO, TRANS_TYPE, TRANS_DATE, STORE_ID, TO_STORE_ID, STATUS,
+        SUPP_NET_AMT, CREATED_BY)
+      VALUES (:id, :transNo, :transType, :transDate, :storeId, :toStoreId, 
+      2, :totalCost, :username)
+    `;
+    const binds = {
+      id: invoiceHeaderId,
+      transNo: transNumber,
+      transType: transType,
+      transDate: localDate,
+      storeId: storeId,
+      toStoreId: toStoreId,
+      totalCost: totalCost,
+      username: username,
+    };
+    await connection.execute(sql, binds);
+    // Register Voucher Details
+    for (let item of items) {
+      let id = await utilities.getLastId("STOCK_MOVE_DT_CLONE");
+      let sql = `
+        INSERT INTO STOCK_MOVE_DT_CLONE (ID, HD_ID, ITEM_ID, QTY, COST, UNIT_ID, SHAD,
+        CREATED_BY, CREATION_DT)
+        VALUES (:id, :headerId, :itemId, :qty, :cost, :unitId, :shad, :createdBy,
+        :creationDate)
+      `;
+      let binds = {
+        id: id,
+        headerId: invoiceHeaderId,
+        itemId: item.itemId,
+        qty: item.qty,
+        cost: item.cost,
+        unitId: item.unitId,
+        shad: item.shad,
+        createdBy: req.userId,
+        creationDate: localDate,
+      };
+      await connection.execute(sql, binds);
+    }
+    await connection.tpcCommit();
+    // const transfereProcedureSql = `ONLINE_PKG.POST_UNPOSTT(:id, :param); END;`;
+    // const transfereProcedureBinds = {
+    //   id: {
+    //     dir: oracledb.BIND_IN,
+    //     type: oracledb.NUMBER,
+    //     val: invoiceHeaderId,
+    //   },
+    //   param: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: "P" },
+    // };
+    // await connection.execute(transfereProcedureSql, transfereProcedureBinds);
+    // const nextTransProcedureSql = `ONLINE_PKG.POST_TRANSFER (:id, :param); END;`;
+    // const nextTransProcedureBinds = {
+    //   id: {
+    //     dir: oracledb.BIND_IN,
+    //     type: oracledb.NUMBER,
+    //     val: invoiceHeaderId,
+    //   },
+    //   param: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: "P" },
+    // };
+    // await connection.execute(nextTransProcedureSql, nextTransProcedureBinds);
+    // await connection.tpcCommit();
+    res.status(201).json({ success: true, message: "Transfered successfully" });
   } catch (err) {
     next(err);
   }

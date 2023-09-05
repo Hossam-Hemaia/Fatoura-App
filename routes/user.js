@@ -3,6 +3,8 @@ const isAuth = require("../middleWares/isAuth");
 const userController = require("../controllers/userController");
 const router = express.Router();
 
+router.get("/data/scout", userController.getDataScout);
+
 router.get("/item/details", isAuth.userIsAuth, userController.getItemDetails);
 
 router.get("/customers", isAuth.userIsAuth, userController.getCustomers);
@@ -27,6 +29,14 @@ router.post(
   "/sells/invoice",
   isAuth.userIsAuth,
   userController.postSellsInvoice
+);
+
+router.get("/stores", isAuth.userIsAuth, userController.getStores);
+
+router.post(
+  "/transfere/items",
+  isAuth.userIsAuth,
+  userController.postTransfereItems
 );
 
 module.exports = router;
