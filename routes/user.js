@@ -7,6 +7,8 @@ router.get("/data/scout", userController.getDataScout);
 
 router.get("/item/details", isAuth.userIsAuth, userController.getItemDetails);
 
+router.get("/all/items", isAuth.userIsAuth, userController.getAllItems);
+
 router.get("/customers", isAuth.userIsAuth, userController.getCustomers);
 
 router.get("/get/customer", isAuth.userIsAuth, userController.getCustomer);
