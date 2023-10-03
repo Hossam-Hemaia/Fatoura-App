@@ -5,7 +5,15 @@ const utilities = require("../utilities/utils");
 exports.getDataScout = async (req, res, next) => {
   try {
     const connection = await dbConnect.getConnection();
-    const result = await connection.execute(`SELECT * FROM STOCK_MOVE_DT`);
+    const result = await connection.execute(
+      `SELECT * FROM STOCK_MOVE_HD WHERE TRANS_NO = 2589`
+    );
+    // const lastId = await utilities.getLastId(
+    //   "STOCK_MOVE_HD",
+    //   "TRANS_NO",
+    //   "TRANS_TYPE",
+    //   1
+    // );
     res.status(200).json({ result });
   } catch (err) {
     next(err);
@@ -174,15 +182,16 @@ exports.postSellsInvoice = async (req, res, next) => {
       "TRANS_TYPE",
       transType
     );
+    console.log(discount);
     // REGISTER INVOICE HEADER
     const currentDate = new Date();
     const localDate = utilities.getLocalDate(currentDate);
     const sql = `
       INSERT INTO STOCK_MOVE_HD
       (ID, TRANS_NO, TRANS_TYPE, TRANS_DATE, DISCOUNT, CUST_ID, STORE_ID, STATUS,
-       CREDIT, CREATED_BY, CREATION_DT, CUST_BRANCH, AREA_ID)
+       CREDIT, DUE_AMOUNT, AMOUNT, CREATED_BY, CREATION_DT, CUST_BRANCH, AREA_ID)
       VALUES (:id, :transNo, :transType, :transDate, :discount, :custId, :storeId,
-      2, :amount, :username, :createDate, :custBranchId, :areaId)
+      2, :credit, :duoAmount, :amount, :username, :createDate, :custBranchId, :areaId)
     `;
     const binds = {
       id: invoiceHeaderId,
@@ -192,7 +201,9 @@ exports.postSellsInvoice = async (req, res, next) => {
       discount: discount,
       custId: custId,
       storeId: storeId,
-      amount: netAmount,
+      credit: netAmount,
+      duoAmount: netAmount,
+      amount: Number(netAmount) + Number(discount),
       username: username,
       createDate: localDate,
       custBranchId: custBranchId,
@@ -278,7 +289,7 @@ exports.postSellsInvoice = async (req, res, next) => {
     }
     res.status(201).json({
       success: true,
-      invoiceNumber: invoiceHeaderId,
+      invoiceNumber: transNumber,
       message: "invoice registered successfully",
     });
   } catch (err) {
@@ -377,7 +388,7 @@ exports.postTransfereItems = async (req, res, next) => {
     await connection.tpcCommit();
     res.status(201).json({
       success: true,
-      invoiceNumber: invoiceHeaderId,
+      invoiceNumber: transNumber,
       message: "Transfered successfully",
     });
   } catch (err) {
