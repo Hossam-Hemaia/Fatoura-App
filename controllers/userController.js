@@ -6,8 +6,13 @@ exports.getDataScout = async (req, res, next) => {
   try {
     const connection = await dbConnect.getConnection();
     const result = await connection.execute(
-      `SELECT * FROM STOCK_MOVE_HD WHERE TRANS_NO = 2589`
+      `SELECT * FROM CUSTOMERS WHERE ID = 584`
     );
+    // const code = parseInt(result.rows[0][0].split("0")[1]);
+    // const nextCode = result.rows[0][0]
+    //   .split("0")[0]
+    //   .concat("0")
+    //   .concat(code + 1);
     // const lastId = await utilities.getLastId(
     //   "STOCK_MOVE_HD",
     //   "TRANS_NO",
@@ -144,6 +149,7 @@ exports.postSellsInvoice = async (req, res, next) => {
       discount,
       customerName,
       customerId,
+      customerType,
       storeId,
       netAmount,
       username,
@@ -159,8 +165,13 @@ exports.postSellsInvoice = async (req, res, next) => {
       // REGISTER NEW CUSTOMER
       const id = await utilities.getLastId("CUSTOMERS");
       custId = id;
+      console.log(customerType);
+      const nextCustomerCode = await utilities.getLastCustomerCode(
+        customerType
+      );
       await connection.execute(
-        `INSERT INTO CUSTOMERS (ID, NAME) VALUES(${id}, '${customerName}')`
+        `INSERT INTO CUSTOMERS (ID, NAME, CUST_TYPE, CUST_CODE)
+         VALUES(${id}, '${customerName}', '${customerType}', '${nextCustomerCode}')`
       );
       await connection.tpcCommit();
     }
@@ -182,13 +193,12 @@ exports.postSellsInvoice = async (req, res, next) => {
       "TRANS_TYPE",
       transType
     );
-    console.log(discount);
     // REGISTER INVOICE HEADER
     const currentDate = new Date();
     const localDate = utilities.getLocalDate(currentDate);
     const sql = `
       INSERT INTO STOCK_MOVE_HD
-      (ID, TRANS_NO, TRANS_TYPE, TRANS_DATE, DISCOUNT, CUST_ID, STORE_ID, STATUS,
+      (ID, TRANS_NO, TRANS_TYPE, TRANS_DATE, DISC_VAL, CUST_ID, STORE_ID, STATUS,
        CREDIT, DUE_AMOUNT, AMOUNT, CREATED_BY, CREATION_DT, CUST_BRANCH, AREA_ID)
       VALUES (:id, :transNo, :transType, :transDate, :discount, :custId, :storeId,
       2, :credit, :duoAmount, :amount, :username, :createDate, :custBranchId, :areaId)

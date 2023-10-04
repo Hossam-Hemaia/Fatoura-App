@@ -1,3 +1,4 @@
+const { AQ_DEQ_NAV_NEXT_MSG } = require("oracledb");
 const dbConnect = require("../dbConnect/dbConnect");
 
 exports.cloneTable = async (sourceTable, clonedTable) => {
@@ -36,6 +37,26 @@ exports.getLocalDate = (date) => {
       isoDate.getTime() - isoDate.getTimezoneOffset() * 60000
     );
     return localDate;
+  } catch (err) {
+    throw new Error(err);
+  }
+};
+
+exports.getLastCustomerCode = async (customerType) => {
+  try {
+    const connection = await dbConnect.getConnection();
+    const lastCode = await connection.execute(
+      `SELECT MAX(CUST_CODE) FROM CUSTOMERS WHERE CUST_TYPE = '${customerType}'`
+    );
+    let code = parseInt(lastCode.rows[0][0].split("0")[1]);
+    if (isNaN(code)) {
+      code = 0;
+    }
+    const nextCode = lastCode.rows[0][0]
+      .split("0")[0]
+      .concat("0")
+      .concat(code + 1);
+    return nextCode;
   } catch (err) {
     throw new Error(err);
   }
